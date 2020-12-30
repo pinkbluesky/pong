@@ -1,0 +1,86 @@
+<html>
+<head>
+<title>student_ai.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #0033b3;}
+.s1 { color: #080808;}
+.s2 { color: #8c8c8c; font-style: italic;}
+.s3 { color: #1750eb;}
+.s4 { color: #008080; font-weight: bold;}
+</style>
+</head>
+<body bgcolor="#ffffff">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+student_ai.py</font>
+</center></td></tr></table>
+<pre><span class="s0">import </span><span class="s1">math</span>
+
+<span class="s0">def </span><span class="s1">pong_ai(paddle_frect, other_paddle_frect, ball_frect, table_size):</span>
+
+    <span class="s2"># add new ball position</span>
+    <span class="s1">pong_ai.ball_pos.append(ball_frect)</span>
+    <span class="s0">if </span><span class="s1">len(pong_ai.ball_pos) &gt; </span><span class="s3">5</span><span class="s1">:</span>
+        <span class="s2"># pop off oldest ball position</span>
+        <span class="s1">pong_ai.ball_pos.pop(</span><span class="s3">0</span><span class="s1">)</span>
+
+    <span class="s2"># calculate the direction vector of ball</span>
+    <span class="s1">dir_vector = (pong_ai.ball_pos[len(pong_ai.ball_pos) - </span><span class="s3">1</span><span class="s1">].pos[</span><span class="s3">0</span><span class="s1">] - pong_ai.ball_pos[</span><span class="s3">0</span><span class="s1">].pos[</span><span class="s3">0</span><span class="s1">],</span>
+                  <span class="s1">pong_ai.ball_pos[len(pong_ai.ball_pos) - </span><span class="s3">1</span><span class="s1">].pos[</span><span class="s3">1</span><span class="s1">] - pong_ai.ball_pos[</span><span class="s3">0</span><span class="s1">].pos[</span><span class="s3">1</span><span class="s1">])</span>
+
+    <span class="s1">prediction_vector = (ball_frect.pos[</span><span class="s3">0</span><span class="s1">], ball_frect.pos[</span><span class="s3">1</span><span class="s1">])</span>
+
+    <span class="s2"># check that direction vector is not (0, 0)</span>
+    <span class="s0">if </span><span class="s1">dir_vector[</span><span class="s3">0</span><span class="s1">] != </span><span class="s3">0</span><span class="s1">:</span>
+
+        <span class="s2"># count limits the number of iterations - w/o count, it takes way too long</span>
+        <span class="s1">count = </span><span class="s3">0</span>
+        <span class="s2"># while prediction vector x-value doesn't exceed table</span>
+        <span class="s0">while </span><span class="s1">table_size[</span><span class="s3">0</span><span class="s1">] &gt; prediction_vector[</span><span class="s3">0</span><span class="s1">] &gt;= </span><span class="s3">0 </span><span class="s0">and </span><span class="s1">count &lt; </span><span class="s3">50</span><span class="s1">:</span>
+            <span class="s1">count += </span><span class="s3">1</span>
+            <span class="s2"># add direction vector</span>
+            <span class="s1">prediction_vector = add_tuple(prediction_vector, dir_vector)</span>
+
+            <span class="s2"># if adding dir_vector to ball position exceeds table...</span>
+            <span class="s0">if </span><span class="s1">table_size[</span><span class="s3">1</span><span class="s1">] &gt; prediction_vector[</span><span class="s3">1</span><span class="s1">] &lt;= </span><span class="s3">0</span><span class="s1">:</span>
+                <span class="s2"># undo the addition</span>
+                <span class="s1">prediction_vector = add_tuple(prediction_vector, (-dir_vector[</span><span class="s3">0</span><span class="s1">], -dir_vector[</span><span class="s3">1</span><span class="s1">]))</span>
+
+                <span class="s2"># add the reflected direction vector</span>
+                <span class="s1">dir_vector = (dir_vector[</span><span class="s3">0</span><span class="s1">], -dir_vector[</span><span class="s3">1</span><span class="s1">])</span>
+                <span class="s1">prediction_vector = add_tuple(prediction_vector, dir_vector)</span>
+
+    <span class="s1">projected_y = prediction_vector[</span><span class="s3">1</span><span class="s1">]</span>
+
+    <span class="s2"># check if it's an attack</span>
+    <span class="s1">x1 = ball_frect.pos[</span><span class="s3">0</span><span class="s1">] - paddle_frect.pos[</span><span class="s3">0</span><span class="s1">]</span>
+    <span class="s1">x2 = pong_ai.ball_pos[</span><span class="s3">0</span><span class="s1">].pos[</span><span class="s3">0</span><span class="s1">] - ball_frect.pos[</span><span class="s3">0</span><span class="s1">]</span>
+    <span class="s2"># uses abs to check if the signs are same</span>
+    <span class="s1">is_ball_attack = </span><span class="s0">True if </span><span class="s1">\</span>
+        <span class="s1">(abs(x1 + x2) == abs(x1) + abs(x2)) \</span>
+        <span class="s0">else False</span>
+
+    <span class="s2"># adjust for projection</span>
+    <span class="s0">if </span><span class="s1">is_ball_attack:</span>
+        <span class="s0">if </span><span class="s1">paddle_frect.pos[</span><span class="s3">1</span><span class="s1">] + paddle_frect.size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2 </span><span class="s1">&gt; projected_y:</span>
+            <span class="s0">return </span><span class="s4">&quot;up&quot;</span>
+        <span class="s0">else</span><span class="s1">:</span>
+            <span class="s0">return </span><span class="s4">&quot;down&quot;</span>
+    <span class="s2"># go to the middle of the table</span>
+    <span class="s0">else</span><span class="s1">:</span>
+        <span class="s0">if </span><span class="s1">paddle_frect.pos[</span><span class="s3">1</span><span class="s1">] + paddle_frect.size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2 </span><span class="s1">&gt; table_size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">:</span>
+            <span class="s0">return </span><span class="s4">&quot;up&quot;</span>
+        <span class="s0">else</span><span class="s1">:</span>
+            <span class="s0">return </span><span class="s4">&quot;down&quot;</span>
+
+<span class="s2"># function that adds two tuples together because + doesn't work</span>
+<span class="s0">def </span><span class="s1">add_tuple(t1, t2):</span>
+    <span class="s0">return </span><span class="s1">tuple(map(</span><span class="s0">lambda </span><span class="s1">i, j: i + j, t1, t2))</span>
+
+<span class="s2"># array to store the past 5 ball positions</span>
+<span class="s1">pong_ai.ball_pos = []</span>
+</pre>
+</body>
+</html>

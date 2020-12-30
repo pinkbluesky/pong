@@ -1,0 +1,402 @@
+<html>
+<head>
+<title>PongAlvAl.py</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+<style type="text/css">
+.s0 { color: #8c8c8c; font-style: italic;}
+.s1 { color: #080808;}
+.s2 { color: #0033b3;}
+.s3 { color: #1750eb;}
+.s4 { color: #008080; font-weight: bold;}
+</style>
+</head>
+<body bgcolor="#ffffff">
+<table CELLSPACING=0 CELLPADDING=5 COLS=1 WIDTH="100%" BGCOLOR="#c0c0c0" >
+<tr><td><center>
+<font face="Arial, Helvetica" color="#000000">
+PongAlvAl.py</font>
+</center></td></tr></table>
+<pre><span class="s0">#   PongAIvAI</span>
+<span class="s0">#   Authors: Michael Guerzhoy and Denis Begun, 2014-2016.</span>
+<span class="s0">#   http://www.cs.toronto.edu/~guerzhoy/</span>
+<span class="s0">#   Email: guerzhoy at cs.toronto.edu</span>
+<span class="s0">#</span>
+<span class="s0">#   This program is free software: you can redistribute it and/or modify</span>
+<span class="s0">#   it under the terms of the GNU General Public License as published by</span>
+<span class="s0">#   the Free Software Foundation, either version 3 of the License, or</span>
+<span class="s0">#   (at your option) any later version. You must credit the authors</span>
+<span class="s0">#   for the original parts of this code.</span>
+<span class="s0">#</span>
+<span class="s0">#   This program is distributed in the hope that it will be useful,</span>
+<span class="s0">#   but WITHOUT ANY WARRANTY; without even the implied warranty of</span>
+<span class="s0">#   MERCHANTABILITY or FITNESS FOR A PARTIhCULAR PURPOSE.  See the</span>
+<span class="s0">#   GNU General Public License for more details.</span>
+<span class="s0">#</span>
+<span class="s0">#   Parts of the code are based on T. S. Hayden Dennison's PongClone (2011)</span>
+<span class="s0">#   http://www.pygame.org/project-PongClone-1740-3032.html</span>
+
+<span class="s0">#   This code runs with Python 2 and requires PyGame for Python 2</span>
+<span class="s0">#   Download PyGame here: https://bitbucket.org/pygame/pygame/downloads</span>
+
+
+<span class="s2">import </span><span class="s1">pygame, sys, time, random, os</span>
+<span class="s2">from </span><span class="s1">pygame.locals </span><span class="s2">import </span><span class="s1">*</span>
+
+<span class="s2">import </span><span class="s1">math</span>
+
+<span class="s1">white = [</span><span class="s3">255</span><span class="s1">, </span><span class="s3">255</span><span class="s1">, </span><span class="s3">255</span><span class="s1">]</span>
+<span class="s1">black = [</span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">]</span>
+<span class="s1">clock = pygame.time.Clock()</span>
+
+
+<span class="s2">class </span><span class="s1">fRect:</span>
+    <span class="s0">&quot;&quot;&quot;Like PyGame's Rect class, but with floating point coordinates&quot;&quot;&quot;</span>
+
+    <span class="s2">def </span><span class="s1">__init__(self, pos, size):</span>
+        <span class="s1">self.pos = (pos[</span><span class="s3">0</span><span class="s1">], pos[</span><span class="s3">1</span><span class="s1">])</span>
+        <span class="s1">self.size = (size[</span><span class="s3">0</span><span class="s1">], size[</span><span class="s3">1</span><span class="s1">])</span>
+
+    <span class="s2">def </span><span class="s1">move(self, x, y):</span>
+        <span class="s2">return </span><span class="s1">fRect((self.pos[</span><span class="s3">0</span><span class="s1">] + x, self.pos[</span><span class="s3">1</span><span class="s1">] + y), self.size)</span>
+
+    <span class="s2">def </span><span class="s1">move_ip(self, x, y, move_factor=</span><span class="s3">1</span><span class="s1">):</span>
+        <span class="s1">self.pos = (self.pos[</span><span class="s3">0</span><span class="s1">] + x * move_factor, self.pos[</span><span class="s3">1</span><span class="s1">] + y * move_factor)</span>
+
+    <span class="s2">def </span><span class="s1">get_rect(self):</span>
+        <span class="s2">return </span><span class="s1">Rect(self.pos, self.size)</span>
+
+    <span class="s2">def </span><span class="s1">copy(self):</span>
+        <span class="s2">return </span><span class="s1">fRect(self.pos, self.size)</span>
+
+    <span class="s2">def </span><span class="s1">intersect(self, other_frect):</span>
+        <span class="s0"># two rectangles intersect iff both x and y projections intersect</span>
+        <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(</span><span class="s3">2</span><span class="s1">):</span>
+            <span class="s2">if </span><span class="s1">self.pos[i] &lt; other_frect.pos[i]:  </span><span class="s0"># projection of self begins to the left</span>
+                <span class="s2">if </span><span class="s1">other_frect.pos[i] &gt;= self.pos[i] + self.size[i]:</span>
+                    <span class="s2">return </span><span class="s3">0</span>
+            <span class="s2">elif </span><span class="s1">self.pos[i] &gt; other_frect.pos[i]:</span>
+                <span class="s2">if </span><span class="s1">self.pos[i] &gt;= other_frect.pos[i] + other_frect.size[i]:</span>
+                    <span class="s2">return </span><span class="s3">0</span>
+        <span class="s2">return </span><span class="s3">1  </span><span class="s0"># self.size &gt; 0 and other_frect.size &gt; 0</span>
+
+
+<span class="s2">class </span><span class="s1">Paddle:</span>
+    <span class="s2">def </span><span class="s1">__init__(self, pos, size, speed, max_angle, facing, timeout):</span>
+        <span class="s1">self.frect = fRect((pos[</span><span class="s3">0</span><span class="s1">] - size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">, pos[</span><span class="s3">1</span><span class="s1">] - size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">), size)</span>
+        <span class="s1">self.speed = speed</span>
+        <span class="s1">self.size = size</span>
+        <span class="s1">self.facing = facing</span>
+        <span class="s1">self.max_angle = max_angle</span>
+        <span class="s1">self.timeout = timeout</span>
+
+    <span class="s2">def </span><span class="s1">factor_accelerate(self, factor):</span>
+        <span class="s1">self.speed = factor * self.speed</span>
+
+    <span class="s2">def </span><span class="s1">move(self, enemy_frect, ball_frect, table_size):</span>
+
+        <span class="s0"># The program crashes if move_getter crashes. The runtime of</span>
+        <span class="s0"># move_getter is not limited</span>
+        <span class="s1">direction = self.move_getter(self.frect.copy(), enemy_frect.copy(), ball_frect.copy(), tuple(table_size))</span>
+
+        <span class="s0"># The program continues if move_getter crashes. The runtime of</span>
+        <span class="s0"># move_getter is limited</span>
+        <span class="s0"># direction = timeout(self.move_getter, (self.frect.copy(), enemy_frect.copy(), ball_frect.copy(), tuple(table_size)), {}, self.timeout)</span>
+
+        <span class="s2">if </span><span class="s1">direction == </span><span class="s4">&quot;up&quot;</span><span class="s1">:</span>
+            <span class="s1">self.frect.move_ip(</span><span class="s3">0</span><span class="s1">, -self.speed)</span>
+        <span class="s2">elif </span><span class="s1">direction == </span><span class="s4">&quot;down&quot;</span><span class="s1">:</span>
+            <span class="s1">self.frect.move_ip(</span><span class="s3">0</span><span class="s1">, self.speed)</span>
+
+        <span class="s1">to_bottom = (self.frect.pos[</span><span class="s3">1</span><span class="s1">] + self.frect.size[</span><span class="s3">1</span><span class="s1">]) - table_size[</span><span class="s3">1</span><span class="s1">]</span>
+
+        <span class="s2">if </span><span class="s1">to_bottom &gt; </span><span class="s3">0</span><span class="s1">:</span>
+            <span class="s1">self.frect.move_ip(</span><span class="s3">0</span><span class="s1">, -to_bottom)</span>
+        <span class="s1">to_top = self.frect.pos[</span><span class="s3">1</span><span class="s1">]</span>
+        <span class="s2">if </span><span class="s1">to_top &lt; </span><span class="s3">0</span><span class="s1">:</span>
+            <span class="s1">self.frect.move_ip(</span><span class="s3">0</span><span class="s1">, -to_top)</span>
+
+    <span class="s2">def </span><span class="s1">get_face_pts(self):</span>
+        <span class="s2">return </span><span class="s1">((self.frect.pos[</span><span class="s3">0</span><span class="s1">] + self.frect.size[</span><span class="s3">0</span><span class="s1">] * self.facing, self.frect.pos[</span><span class="s3">1</span><span class="s1">]),</span>
+                <span class="s1">(self.frect.pos[</span><span class="s3">0</span><span class="s1">] + self.frect.size[</span><span class="s3">0</span><span class="s1">] * self.facing, self.frect.pos[</span><span class="s3">1</span><span class="s1">] + self.frect.size[</span><span class="s3">1</span><span class="s1">] - </span><span class="s3">1</span><span class="s1">)</span>
+                <span class="s1">)</span>
+
+    <span class="s2">def </span><span class="s1">get_angle(self, y):</span>
+        <span class="s1">center = self.frect.pos[</span><span class="s3">1</span><span class="s1">] + self.size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2</span>
+        <span class="s1">rel_dist_from_c = ((y - center) / self.size[</span><span class="s3">1</span><span class="s1">])</span>
+        <span class="s1">rel_dist_from_c = min(</span><span class="s3">0.5</span><span class="s1">, rel_dist_from_c)</span>
+        <span class="s1">rel_dist_from_c = max(-</span><span class="s3">0.5</span><span class="s1">, rel_dist_from_c)</span>
+        <span class="s1">sign = </span><span class="s3">1 </span><span class="s1">- </span><span class="s3">2 </span><span class="s1">* self.facing</span>
+
+        <span class="s2">return </span><span class="s1">sign * rel_dist_from_c * self.max_angle * math.pi / </span><span class="s3">180</span>
+
+
+<span class="s2">class </span><span class="s1">Ball:</span>
+    <span class="s2">def </span><span class="s1">__init__(self, table_size, size, paddle_bounce, wall_bounce, dust_error, init_speed_mag):</span>
+        <span class="s1">rand_ang = (</span><span class="s3">.4 </span><span class="s1">+ </span><span class="s3">.4 </span><span class="s1">* random.random()) * math.pi * (</span><span class="s3">1 </span><span class="s1">- </span><span class="s3">2 </span><span class="s1">* (random.random() &gt; </span><span class="s3">.5</span><span class="s1">)) + </span><span class="s3">.5 </span><span class="s1">* math.pi</span>
+        <span class="s1">speed = (init_speed_mag * math.cos(rand_ang), init_speed_mag * math.sin(rand_ang))</span>
+        <span class="s1">pos = (table_size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">, table_size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">)</span>
+        <span class="s1">self.frect = fRect((pos[</span><span class="s3">0</span><span class="s1">] - size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">, pos[</span><span class="s3">1</span><span class="s1">] - size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">), size)</span>
+        <span class="s1">self.speed = speed</span>
+        <span class="s1">self.size = size</span>
+        <span class="s1">self.paddle_bounce = paddle_bounce</span>
+        <span class="s1">self.wall_bounce = wall_bounce</span>
+        <span class="s1">self.dust_error = dust_error</span>
+        <span class="s1">self.init_speed_mag = init_speed_mag</span>
+        <span class="s1">self.prev_bounce = </span><span class="s2">None</span>
+
+    <span class="s2">def </span><span class="s1">get_center(self):</span>
+        <span class="s2">return </span><span class="s1">(self.frect.pos[</span><span class="s3">0</span><span class="s1">] + </span><span class="s3">.5 </span><span class="s1">* self.frect.size[</span><span class="s3">0</span><span class="s1">], self.frect.pos[</span><span class="s3">1</span><span class="s1">] + </span><span class="s3">.5 </span><span class="s1">* self.frect.size[</span><span class="s3">1</span><span class="s1">])</span>
+
+    <span class="s2">def </span><span class="s1">get_speed_mag(self):</span>
+        <span class="s2">return </span><span class="s1">math.sqrt(self.speed[</span><span class="s3">0</span><span class="s1">] ** </span><span class="s3">2 </span><span class="s1">+ self.speed[</span><span class="s3">1</span><span class="s1">] ** </span><span class="s3">2</span><span class="s1">)</span>
+
+    <span class="s2">def </span><span class="s1">factor_accelerate(self, factor):</span>
+        <span class="s1">self.speed = (factor * self.speed[</span><span class="s3">0</span><span class="s1">], factor * self.speed[</span><span class="s3">1</span><span class="s1">])</span>
+
+    <span class="s2">def </span><span class="s1">move(self, paddles, table_size, move_factor):</span>
+        <span class="s1">moved = </span><span class="s3">0</span>
+        <span class="s1">walls_Rects = [Rect((-</span><span class="s3">100</span><span class="s1">, -</span><span class="s3">100</span><span class="s1">), (table_size[</span><span class="s3">0</span><span class="s1">] + </span><span class="s3">200</span><span class="s1">, </span><span class="s3">100</span><span class="s1">)),</span>
+                       <span class="s1">Rect((-</span><span class="s3">100</span><span class="s1">, table_size[</span><span class="s3">1</span><span class="s1">]), (table_size[</span><span class="s3">0</span><span class="s1">] + </span><span class="s3">200</span><span class="s1">, </span><span class="s3">100</span><span class="s1">))]</span>
+
+        <span class="s2">for </span><span class="s1">wall_rect </span><span class="s2">in </span><span class="s1">walls_Rects:</span>
+            <span class="s2">if </span><span class="s1">self.frect.get_rect().colliderect(wall_rect):</span>
+                <span class="s1">c = </span><span class="s3">0</span>
+
+                <span class="s2">while </span><span class="s1">self.frect.get_rect().colliderect(wall_rect):</span>
+                    <span class="s1">self.frect.move_ip(-</span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">0</span><span class="s1">], -</span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">1</span><span class="s1">], move_factor)</span>
+                    <span class="s1">c += </span><span class="s3">1  </span><span class="s0"># this basically tells us how far the ball has traveled into the wall</span>
+                <span class="s1">r1 = </span><span class="s3">1 </span><span class="s1">+ </span><span class="s3">2 </span><span class="s1">* (random.random() - </span><span class="s3">.5</span><span class="s1">) * self.dust_error</span>
+                <span class="s1">r2 = </span><span class="s3">1 </span><span class="s1">+ </span><span class="s3">2 </span><span class="s1">* (random.random() - </span><span class="s3">.5</span><span class="s1">) * self.dust_error</span>
+
+                <span class="s1">self.speed = (self.wall_bounce * self.speed[</span><span class="s3">0</span><span class="s1">] * r1, -self.wall_bounce * self.speed[</span><span class="s3">1</span><span class="s1">] * r2)</span>
+
+                <span class="s2">while </span><span class="s1">c &gt; </span><span class="s3">0 </span><span class="s2">or </span><span class="s1">self.frect.get_rect().colliderect(wall_rect):</span>
+                    <span class="s1">self.frect.move_ip(</span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">0</span><span class="s1">], </span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">1</span><span class="s1">], move_factor)</span>
+                    <span class="s1">c -= </span><span class="s3">1  </span><span class="s0"># move by roughly the same amount as the ball had traveled into the wall</span>
+                <span class="s1">moved = </span><span class="s3">1</span>
+
+        <span class="s2">for </span><span class="s1">paddle </span><span class="s2">in </span><span class="s1">paddles:</span>
+            <span class="s2">if </span><span class="s1">self.frect.intersect(paddle.frect):</span>
+                <span class="s2">if </span><span class="s1">(paddle.facing == </span><span class="s3">1 </span><span class="s2">and </span><span class="s1">self.get_center()[</span><span class="s3">0</span><span class="s1">] &lt; paddle.frect.pos[</span><span class="s3">0</span><span class="s1">] + paddle.frect.size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">) </span><span class="s2">or </span><span class="s1">\</span>
+                        <span class="s1">(paddle.facing == </span><span class="s3">0 </span><span class="s2">and </span><span class="s1">self.get_center()[</span><span class="s3">0</span><span class="s1">] &gt; paddle.frect.pos[</span><span class="s3">0</span><span class="s1">] + paddle.frect.size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">):</span>
+                    <span class="s2">continue</span>
+
+                <span class="s1">c = </span><span class="s3">0</span>
+
+                <span class="s2">while </span><span class="s1">self.frect.intersect(paddle.frect) </span><span class="s2">and not </span><span class="s1">self.frect.get_rect().colliderect(</span>
+                        <span class="s1">walls_Rects[</span><span class="s3">0</span><span class="s1">]) </span><span class="s2">and not </span><span class="s1">self.frect.get_rect().colliderect(walls_Rects[</span><span class="s3">1</span><span class="s1">]):</span>
+                    <span class="s1">self.frect.move_ip(-</span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">0</span><span class="s1">], -</span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">1</span><span class="s1">], move_factor)</span>
+
+                    <span class="s1">c += </span><span class="s3">1</span>
+                <span class="s1">theta = paddle.get_angle(self.frect.pos[</span><span class="s3">1</span><span class="s1">] + </span><span class="s3">.5 </span><span class="s1">* self.frect.size[</span><span class="s3">1</span><span class="s1">])</span>
+
+                <span class="s1">v = self.speed</span>
+
+                <span class="s1">v = [math.cos(theta) * v[</span><span class="s3">0</span><span class="s1">] - math.sin(theta) * v[</span><span class="s3">1</span><span class="s1">],</span>
+                     <span class="s1">math.sin(theta) * v[</span><span class="s3">0</span><span class="s1">] + math.cos(theta) * v[</span><span class="s3">1</span><span class="s1">]]</span>
+
+                <span class="s1">v[</span><span class="s3">0</span><span class="s1">] = -v[</span><span class="s3">0</span><span class="s1">]</span>
+
+                <span class="s1">v = [math.cos(-theta) * v[</span><span class="s3">0</span><span class="s1">] - math.sin(-theta) * v[</span><span class="s3">1</span><span class="s1">],</span>
+                     <span class="s1">math.cos(-theta) * v[</span><span class="s3">1</span><span class="s1">] + math.sin(-theta) * v[</span><span class="s3">0</span><span class="s1">]]</span>
+
+                <span class="s0"># Bona fide hack: enforce a lower bound on horizontal speed and disallow back reflection</span>
+                <span class="s2">if </span><span class="s1">v[</span><span class="s3">0</span><span class="s1">] * (</span>
+                        <span class="s3">2 </span><span class="s1">* paddle.facing - </span><span class="s3">1</span><span class="s1">) &lt; </span><span class="s3">1</span><span class="s1">:  </span><span class="s0"># ball is not traveling (a) away from paddle (b) at a sufficient speed</span>
+                    <span class="s1">v[</span><span class="s3">1</span><span class="s1">] = (v[</span><span class="s3">1</span><span class="s1">] / abs(v[</span><span class="s3">1</span><span class="s1">])) * math.sqrt(</span>
+                        <span class="s1">v[</span><span class="s3">0</span><span class="s1">] ** </span><span class="s3">2 </span><span class="s1">+ v[</span><span class="s3">1</span><span class="s1">] ** </span><span class="s3">2 </span><span class="s1">- </span><span class="s3">1</span><span class="s1">)  </span><span class="s0"># transform y velocity so as to maintain the speed</span>
+                    <span class="s1">v[</span><span class="s3">0</span><span class="s1">] = (</span>
+                                <span class="s3">2 </span><span class="s1">* paddle.facing - </span><span class="s3">1</span><span class="s1">)  </span><span class="s0"># note that minimal horiz speed will be lower than we're used to, where it was 0.95 prior to the  increase by 1.2</span>
+
+                <span class="s0"># a bit hacky, prevent multiple bounces from accelerating</span>
+                <span class="s0"># the ball too much</span>
+                <span class="s2">if not </span><span class="s1">paddle </span><span class="s2">is </span><span class="s1">self.prev_bounce:</span>
+                    <span class="s1">self.speed = (v[</span><span class="s3">0</span><span class="s1">] * self.paddle_bounce, v[</span><span class="s3">1</span><span class="s1">] * self.paddle_bounce)</span>
+                <span class="s2">else</span><span class="s1">:</span>
+                    <span class="s1">self.speed = (v[</span><span class="s3">0</span><span class="s1">], v[</span><span class="s3">1</span><span class="s1">])</span>
+                <span class="s1">self.prev_bounce = paddle</span>
+
+                <span class="s2">while </span><span class="s1">c &gt; </span><span class="s3">0 </span><span class="s2">or </span><span class="s1">self.frect.intersect(paddle.frect):</span>
+                    <span class="s1">self.frect.move_ip(</span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">0</span><span class="s1">], </span><span class="s3">.1 </span><span class="s1">* self.speed[</span><span class="s3">1</span><span class="s1">], move_factor)</span>
+
+                    <span class="s1">c -= </span><span class="s3">1</span>
+
+                <span class="s1">moved = </span><span class="s3">1</span>
+
+        <span class="s2">if not </span><span class="s1">moved:</span>
+            <span class="s1">self.frect.move_ip(self.speed[</span><span class="s3">0</span><span class="s1">], self.speed[</span><span class="s3">1</span><span class="s1">], move_factor)</span>
+
+
+<span class="s2">def </span><span class="s1">directions_from_input(paddle_rect, other_paddle_rect, ball_rect, table_size):</span>
+    <span class="s1">keys = pygame.key.get_pressed()</span>
+
+    <span class="s2">if </span><span class="s1">keys[pygame.K_UP]:</span>
+        <span class="s2">return </span><span class="s4">&quot;up&quot;</span>
+    <span class="s2">elif </span><span class="s1">keys[pygame.K_DOWN]:</span>
+        <span class="s2">return </span><span class="s4">&quot;down&quot;</span>
+    <span class="s2">else</span><span class="s1">:</span>
+        <span class="s2">return None</span>
+
+
+<span class="s2">def </span><span class="s1">timeout(func, args=(), kwargs={}, timeout_duration=</span><span class="s3">1</span><span class="s1">, default=</span><span class="s2">None</span><span class="s1">):</span>
+    <span class="s0">'''From: 
+    http://code.activestate.com/recipes/473878-timeout-function-using-threading/'''</span>
+    <span class="s2">import </span><span class="s1">threading</span>
+    <span class="s2">class </span><span class="s1">InterruptableThread(threading.Thread):</span>
+        <span class="s2">def </span><span class="s1">__init__(self):</span>
+            <span class="s1">threading.Thread.__init__(self)</span>
+            <span class="s1">self.result = </span><span class="s2">None</span>
+
+        <span class="s2">def </span><span class="s1">run(self):</span>
+            <span class="s2">try</span><span class="s1">:</span>
+                <span class="s1">self.result = func(*args, **kwargs)</span>
+            <span class="s2">except</span><span class="s1">:</span>
+                <span class="s1">self.result = default</span>
+
+    <span class="s1">it = InterruptableThread()</span>
+    <span class="s1">it.start()</span>
+    <span class="s1">it.join(timeout_duration)</span>
+    <span class="s2">if </span><span class="s1">it.isAlive():</span>
+        <span class="s1">print(</span><span class="s4">&quot;TIMEOUT&quot;</span><span class="s1">)</span>
+        <span class="s2">return </span><span class="s1">default</span>
+    <span class="s2">else</span><span class="s1">:</span>
+        <span class="s2">return </span><span class="s1">it.result</span>
+
+
+<span class="s2">def </span><span class="s1">render(screen, paddles, ball, score, table_size):</span>
+    <span class="s1">screen.fill(black)</span>
+
+    <span class="s1">pygame.draw.rect(screen, white, paddles[</span><span class="s3">0</span><span class="s1">].frect.get_rect())</span>
+    <span class="s1">pygame.draw.rect(screen, white, paddles[</span><span class="s3">1</span><span class="s1">].frect.get_rect())</span>
+
+    <span class="s1">pygame.draw.circle(screen, white, (int(ball.get_center()[</span><span class="s3">0</span><span class="s1">]), int(ball.get_center()[</span><span class="s3">1</span><span class="s1">])),</span>
+                       <span class="s1">int(ball.frect.size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">), </span><span class="s3">0</span><span class="s1">)</span>
+
+    <span class="s1">pygame.draw.line(screen, white, [screen.get_width() / </span><span class="s3">2</span><span class="s1">, </span><span class="s3">0</span><span class="s1">], [screen.get_width() / </span><span class="s3">2</span><span class="s1">, screen.get_height()])</span>
+
+    <span class="s1">score_font = pygame.font.Font(</span><span class="s2">None</span><span class="s1">, </span><span class="s3">32</span><span class="s1">)</span>
+    <span class="s1">screen.blit(score_font.render(str(score[</span><span class="s3">0</span><span class="s1">]), </span><span class="s2">True</span><span class="s1">, white), [int(</span><span class="s3">0.4 </span><span class="s1">* table_size[</span><span class="s3">0</span><span class="s1">]) - </span><span class="s3">8</span><span class="s1">, </span><span class="s3">0</span><span class="s1">])</span>
+    <span class="s1">screen.blit(score_font.render(str(score[</span><span class="s3">1</span><span class="s1">]), </span><span class="s2">True</span><span class="s1">, white), [int(</span><span class="s3">0.6 </span><span class="s1">* table_size[</span><span class="s3">0</span><span class="s1">]) - </span><span class="s3">8</span><span class="s1">, </span><span class="s3">0</span><span class="s1">])</span>
+
+    <span class="s1">pygame.display.flip()</span>
+
+
+<span class="s2">def </span><span class="s1">check_point(score, ball, table_size):</span>
+    <span class="s2">if </span><span class="s1">ball.frect.pos[</span><span class="s3">0</span><span class="s1">] + ball.size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2 </span><span class="s1">&lt; </span><span class="s3">0</span><span class="s1">:</span>
+        <span class="s1">score[</span><span class="s3">1</span><span class="s1">] += </span><span class="s3">1</span>
+        <span class="s1">ball = Ball(table_size, ball.size, ball.paddle_bounce, ball.wall_bounce, ball.dust_error, ball.init_speed_mag)</span>
+        <span class="s2">return </span><span class="s1">(ball, score)</span>
+    <span class="s2">elif </span><span class="s1">ball.frect.pos[</span><span class="s3">0</span><span class="s1">] + ball.size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2 </span><span class="s1">&gt;= table_size[</span><span class="s3">0</span><span class="s1">]:</span>
+        <span class="s1">ball = Ball(table_size, ball.size, ball.paddle_bounce, ball.wall_bounce, ball.dust_error, ball.init_speed_mag)</span>
+        <span class="s1">score[</span><span class="s3">0</span><span class="s1">] += </span><span class="s3">1</span>
+        <span class="s2">return </span><span class="s1">(ball, score)</span>
+
+    <span class="s2">return </span><span class="s1">(ball, score)</span>
+
+
+<span class="s2">def </span><span class="s1">game_loop(screen, paddles, ball, table_size, clock_rate, turn_wait_rate, score_to_win, display):</span>
+    <span class="s1">score = [</span><span class="s3">0</span><span class="s1">, </span><span class="s3">0</span><span class="s1">]</span>
+
+    <span class="s2">while </span><span class="s1">max(score) &lt; score_to_win:</span>
+        <span class="s1">old_score = score[:]</span>
+        <span class="s1">ball, score = check_point(score, ball, table_size)</span>
+        <span class="s1">paddles[</span><span class="s3">0</span><span class="s1">].move(paddles[</span><span class="s3">1</span><span class="s1">].frect, ball.frect, table_size)</span>
+        <span class="s1">paddles[</span><span class="s3">1</span><span class="s1">].move(paddles[</span><span class="s3">0</span><span class="s1">].frect, ball.frect, table_size)</span>
+
+        <span class="s1">inv_move_factor = int((ball.speed[</span><span class="s3">0</span><span class="s1">] ** </span><span class="s3">2 </span><span class="s1">+ ball.speed[</span><span class="s3">1</span><span class="s1">] ** </span><span class="s3">2</span><span class="s1">) ** </span><span class="s3">.5</span><span class="s1">)</span>
+        <span class="s2">if </span><span class="s1">inv_move_factor &gt; </span><span class="s3">0</span><span class="s1">:</span>
+            <span class="s2">for </span><span class="s1">i </span><span class="s2">in </span><span class="s1">range(inv_move_factor):</span>
+                <span class="s1">ball.move(paddles, table_size, </span><span class="s3">1. </span><span class="s1">/ inv_move_factor)</span>
+        <span class="s2">else</span><span class="s1">:</span>
+            <span class="s1">ball.move(paddles, table_size, </span><span class="s3">1</span><span class="s1">)</span>
+
+        <span class="s2">if not </span><span class="s1">display:</span>
+            <span class="s2">continue</span>
+        <span class="s2">if </span><span class="s1">score != old_score:</span>
+            <span class="s1">font = pygame.font.Font(</span><span class="s2">None</span><span class="s1">, </span><span class="s3">32</span><span class="s1">)</span>
+            <span class="s2">if </span><span class="s1">score[</span><span class="s3">0</span><span class="s1">] != old_score[</span><span class="s3">0</span><span class="s1">]:</span>
+                <span class="s1">screen.blit(font.render(</span><span class="s4">&quot;Left scores!&quot;</span><span class="s1">, </span><span class="s2">True</span><span class="s1">, white, black), [</span><span class="s3">0</span><span class="s1">, </span><span class="s3">32</span><span class="s1">])</span>
+            <span class="s2">else</span><span class="s1">:</span>
+                <span class="s1">screen.blit(font.render(</span><span class="s4">&quot;Right scores!&quot;</span><span class="s1">, </span><span class="s2">True</span><span class="s1">, white, black), [int(table_size[</span><span class="s3">0</span><span class="s1">] / </span><span class="s3">2 </span><span class="s1">+ </span><span class="s3">20</span><span class="s1">), </span><span class="s3">32</span><span class="s1">])</span>
+
+            <span class="s1">pygame.display.flip()</span>
+            <span class="s1">clock.tick(turn_wait_rate)</span>
+
+        <span class="s1">render(screen, paddles, ball, score, table_size)</span>
+
+        <span class="s1">pygame.event.pump()</span>
+        <span class="s1">keys = pygame.key.get_pressed()</span>
+        <span class="s2">if </span><span class="s1">keys[K_q]:</span>
+            <span class="s2">return</span>
+
+        <span class="s1">clock.tick(clock_rate)</span>
+
+    <span class="s1">font = pygame.font.Font(</span><span class="s2">None</span><span class="s1">, </span><span class="s3">64</span><span class="s1">)</span>
+    <span class="s2">if </span><span class="s1">score[</span><span class="s3">0</span><span class="s1">] &gt; score[</span><span class="s3">1</span><span class="s1">]:</span>
+        <span class="s1">screen.blit(font.render(</span><span class="s4">&quot;Left wins!&quot;</span><span class="s1">, </span><span class="s2">True</span><span class="s1">, white, black), [</span><span class="s3">24</span><span class="s1">, </span><span class="s3">32</span><span class="s1">])</span>
+    <span class="s2">else</span><span class="s1">:</span>
+        <span class="s1">screen.blit(font.render(</span><span class="s4">&quot;Right wins!&quot;</span><span class="s1">, </span><span class="s2">True</span><span class="s1">, white, black), [</span><span class="s3">24</span><span class="s1">, </span><span class="s3">32</span><span class="s1">])</span>
+    <span class="s1">pygame.display.flip()</span>
+    <span class="s1">clock.tick(</span><span class="s3">2</span><span class="s1">)</span>
+
+    <span class="s1">pygame.event.pump()</span>
+    <span class="s2">while </span><span class="s1">any(pygame.key.get_pressed()):</span>
+        <span class="s1">pygame.event.pump()</span>
+        <span class="s1">clock.tick(</span><span class="s3">30</span><span class="s1">)</span>
+
+    <span class="s1">print(score)</span>
+
+
+<span class="s2">def </span><span class="s1">init_game():</span>
+    <span class="s1">table_size = (</span><span class="s3">440</span><span class="s1">, </span><span class="s3">280</span><span class="s1">)</span>
+    <span class="s1">paddle_size = (</span><span class="s3">10</span><span class="s1">, </span><span class="s3">70</span><span class="s1">)</span>
+    <span class="s1">ball_size = (</span><span class="s3">15</span><span class="s1">, </span><span class="s3">15</span><span class="s1">)</span>
+    <span class="s1">paddle_speed = </span><span class="s3">1</span>
+    <span class="s1">max_angle = </span><span class="s3">45</span>
+
+    <span class="s1">paddle_bounce = </span><span class="s3">1.2</span>
+    <span class="s1">wall_bounce = </span><span class="s3">1.00</span>
+    <span class="s1">dust_error = </span><span class="s3">0.00</span>
+    <span class="s1">init_speed_mag = </span><span class="s3">2</span>
+    <span class="s1">timeout = </span><span class="s3">0.0003</span>
+    <span class="s1">clock_rate = </span><span class="s3">1000 </span><span class="s0">#80</span>
+    <span class="s1">turn_wait_rate = </span><span class="s3">3</span>
+    <span class="s1">score_to_win = </span><span class="s3">10</span>
+
+    <span class="s1">screen = pygame.display.set_mode(table_size)</span>
+    <span class="s1">pygame.display.set_caption(</span><span class="s4">'PongAIvAI'</span><span class="s1">)</span>
+
+    <span class="s1">paddles = [Paddle((</span><span class="s3">20</span><span class="s1">, table_size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">), paddle_size, paddle_speed, max_angle, </span><span class="s3">1</span><span class="s1">, timeout),</span>
+               <span class="s1">Paddle((table_size[</span><span class="s3">0</span><span class="s1">] - </span><span class="s3">20</span><span class="s1">, table_size[</span><span class="s3">1</span><span class="s1">] / </span><span class="s3">2</span><span class="s1">), paddle_size, paddle_speed, max_angle, </span><span class="s3">0</span><span class="s1">, timeout)]</span>
+    <span class="s1">ball = Ball(table_size, ball_size, paddle_bounce, wall_bounce, dust_error, init_speed_mag)</span>
+
+    <span class="s2">import </span><span class="s1">chaser_ai</span>
+    <span class="s2">import </span><span class="s1">student_ai</span>
+
+    <span class="s0"># To have The Chaser play against your AI engine,</span>
+    <span class="s0"># store your code in student_ai.py, import student_ai,</span>
+    <span class="s0"># and set paddles[1].move_getter to student_ai.pong_ai</span>
+    <span class="s1">paddles[</span><span class="s3">0</span><span class="s1">].move_getter = chaser_ai.pong_ai</span>
+    <span class="s1">paddles[</span><span class="s3">1</span><span class="s1">].move_getter = student_ai.pong_ai  </span><span class="s0"># directions_from_input # chaser_ai.pong_ai</span>
+
+    <span class="s1">game_loop(screen, paddles, ball, table_size, clock_rate, turn_wait_rate, score_to_win, </span><span class="s3">1</span><span class="s1">)</span>
+
+    <span class="s1">screen.blit(pygame.font.Font(</span><span class="s2">None</span><span class="s1">, </span><span class="s3">32</span><span class="s1">).render(str(</span><span class="s4">'SWITCHING SIDES'</span><span class="s1">), </span><span class="s2">True</span><span class="s1">, white),</span>
+                <span class="s1">[int(</span><span class="s3">0.6 </span><span class="s1">* table_size[</span><span class="s3">0</span><span class="s1">]) - </span><span class="s3">8</span><span class="s1">, </span><span class="s3">0</span><span class="s1">])</span>
+
+    <span class="s1">pygame.display.flip()</span>
+    <span class="s1">clock.tick(</span><span class="s3">4</span><span class="s1">)</span>
+
+    <span class="s1">paddles[</span><span class="s3">0</span><span class="s1">].move_getter, paddles[</span><span class="s3">1</span><span class="s1">].move_getter = paddles[</span><span class="s3">1</span><span class="s1">].move_getter, paddles[</span><span class="s3">0</span><span class="s1">].move_getter</span>
+
+    <span class="s1">game_loop(screen, paddles, ball, table_size, clock_rate, turn_wait_rate, score_to_win, </span><span class="s3">1</span><span class="s1">)</span>
+
+    <span class="s1">pygame.quit()</span>
+
+
+<span class="s2">if </span><span class="s1">__name__ == </span><span class="s4">'__main__'</span><span class="s1">:</span>
+    <span class="s1">pygame.init()</span>
+    <span class="s1">init_game()</span>
+</pre>
+</body>
+</html>
